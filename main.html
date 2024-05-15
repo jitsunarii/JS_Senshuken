@@ -40,12 +40,12 @@
           Right: "d",
           Down: "s",
           Left: "a",
-          A: "n",
-          B: "m",
+          A: "ArrowLeft",
+          B: "ArrowUp",
           Start: "Enter",
         },
         //vpadType: DirKey8way,
-        vpadType: DirKey4way /*切り替えできます*/,
+        // vpadType: DirKey4way /*切り替えできます*/,
       };
 
       //読みこむデータリスト(名前：ファイルパス)
@@ -97,7 +97,7 @@
 
         update(delta) {
           super.update(delta);
-          inputManager.gamePad.update();
+          // inputManager.gamePad.update();
 
           if (
             inputManager.checkButton("Start") == inputManager.keyStatus.DOWN
@@ -206,7 +206,7 @@
           super.update(delta);
           this.posRestoreFractionalPart(); //一番最初に小数点を戻す
 
-          const btn = inputManager.checkButton("A");
+          const btn = inputManager.checkButton("Up");
           if (btn == inputManager.keyStatus.DOWN) {
             if (this.isOnGround) {
               this.vy = -8;
