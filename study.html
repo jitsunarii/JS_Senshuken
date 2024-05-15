@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
+    <script>
+      window.onload = function () {
+        const app = new PIXI.Application({
+          width: 800,
+          height: 800,
+          backgroundColor: 0x222222,
+          resolution: 1,
+          autoDensity: true,
+        });
+        document.body.appendChild(app.view);
+
+        const style = new PIXI.TextStyle({
+          fontFamily: "sans-serif",
+          fontSize: 80,
+          fill: 0xffffff,
+          fontWeight: "bold",
+          stroke: "red", //縁取りの色
+          strokeThickness: 4, //縁取りの太さ
+        });
+        const p = new PIXI.Text("FUKUOKAA", style);
+        p.x = 0.5;
+        p.y = 0.5;
+        p.anchor.set(0.5);
+        p.position.set(0, 150);
+        app.ticker.add((delta) => {
+          if (p.x < 300) {
+            p.x += 3 * (1 + delta);
+          }
+        });
+        app.stage.addChild(p);
+        const p_No = new PIXI.Text("NO", style);
+        p_No.x = 0.5;
+        p_No.y = 0.5;
+        p_No.anchor.set(0.5);
+        p_No.position.set(0, 270);
+        app.ticker.add((delta) => {
+          if (p_No.x < 400) {
+            p_No.x += 3 * (1 + delta);
+          }
+        });
+        app.stage.addChild(p_No);
+
+        const p_p = new PIXI.Text("FIGHTER", style);
+        p_p.x = 1;
+        p_p.y = 1;
+        p_p.position.set(0, 330);
+        app.ticker.add((delta) => {
+          if (p_p.x < 400) {
+            p_p.x += 3 * (1 + delta);
+          }
+        });
+        app.stage.addChild(p_p);
+        const g = new PIXI.Graphics();
+        app.stage.addChild(g);
+        //直線の描画
+        // g.lineStyle(4, 0xffffff, 1);
+        // g.moveTo(10, 10); //始点
+        // g.lineTo(100, 100); //終点
+        // g.lineStyle();
+        // //赤四角の描画
+        // g.beginFill(0xff0000);
+        // g.drawRect(120, 12, 64, 96);
+        // g.endFill();
+        // //黄色四角の描画
+        // g.lineStyle(4, 0xffff00, 1, 0);
+        // g.drawRect(200, 12, 64, 96);
+        // //中ピンク、ふちが黄緑の描画
+        // g.lineStyle(4, 0x00ff00, 1, 0);
+        // g.beginFill(0xff00ff);
+        // g.drawRect(280, 12, 64, 96);
+        // g.endFill();
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style href="https://codepen.io/inwan78/pen/WNJEKeQ.css"></style>
+    <style>
+      CSS JSResult Skip Results Iframe EDIT ON * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: #222;
+      }
+
+      /*ゲーム画面*/
+      #game-screen {
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
+    <script src="./chara.js"></script>
+    <script src="./code.js"></script>
+    <script>
+      //設定用
+      const Config = {
+        //画面の解像度
+        Screen: {
+          Width: 512, //幅
+          Height: 512, //高さ
+          BackGroundColor: 0x444444, //背景色
+        },
+        Keys: {
+          //キーボード入力
+          Up: "w",
+          Right: "d",
+          Down: "s",
+          Left: "a",
+          A: "n",
+          B: "m",
+          Start: "Enter",
+        },
+        //vpadType: DirKey8way,
+        vpadType: DirKey4way /*切り替えできます*/,
+      };
+
+      //読みこむデータリスト(名前：ファイルパス)
+      const Resource = {
+        Player: "https://dl.dropbox.com/s/myi6mgjgsyh5e7y/player.png",
+      };
+
+      //上のリストを読み込みやすい形に変えてます
+      const assets = [];
+      for (let key in Resource) {
+        assets.push(Resource[key]);
+      }
+
+      let core; //ゲームの基幹プログラム用の変数
+      let inputManager;
+
+      //ブラウザの読み込みが完了したら実行されます
+      window.onload = () => {
+        //設定した画面サイズでcoreを作成
+        core = new Game(
+          Config.Screen.Width,
+          Config.Screen.Height,
+          Config.Screen.BackGroundColor
+        );
+        inputManager = new InputManager();
+
+        //データのロード
+        core.preload(assets);
+
+        //読み込み完了でメインシーンに切り替わります
+        core.onload = () => {
+          core.replaceScene(new MainScene());
+        };
+      };
+
+      let player;
+      //メインシーン
+      class MainScene extends Container {
+        constructor() {
+          super();
+
+          player = new Player(64, 64);
+          this.addChild(player);
+        }
+        update(delta) {
+          super.update(delta);
+          inputManager.gamePad.update();
+
+          if (
+            inputManager.checkButton("Start") == inputManager.keyStatus.DOWN
+          ) {
+            core.pushScene(new PauseScene());
+          }
+        }
+      }
+
+      //全キャラクター共通基本クラス
+      class Actor extends EnchantSprite {
+        constructor(w, h) {
+          super(w, h);
+          this.anchor.set(0.5, 1); //Y座標の中心は足元に
+          this.vx = 0;
+          this.vy = 0;
+          this.fpX = 0; //小数点以下保存用
+          this.fpY = 0;
+
+          //アニメーション用
+          this.animation = {
+            isPlayAuto: false,
+            frameNumbers: [],
+            intervals: [],
+            type: null,
+            index: 0,
+            count: 0,
+            data: {},
+          };
+        }
+        //アニメーション切り替えプログラム
+        changeAnimationPattern(type) {
+          const anim = this.animation;
+          anim.frameNumbers = anim.data[type].frameNumbers;
+          anim.intervals = anim.data[type].intervals;
+          anim.type = type;
+          anim.index = 0;
+          anim.count = 0;
+          this.frameNumber = anim.frameNumbers[0];
+        }
+        //キャラの座標から小数点を抜く
+        posRemoveFractionalPart() {
+          const x = this.x | 0; //小数点以下を切り捨て
+          this.fpX = this.x - x;
+          this.x = x;
+          const y = this.y | 0;
+          this.fpY = this.y - y;
+          this.y = y;
+        }
+        //キャラの座標に小数点以下を戻す
+        posRestoreFractionalPart() {
+          this.x += this.fpX;
+          this.y += this.fpY;
+        }
+        update(delta) {
+          super.update(delta);
+          //自動アニメーション処理
+          const anim = this.animation;
+          if (anim.isPlayAuto && ++anim.count > anim.intervals[anim.index]) {
+            if (++anim.index >= anim.intervals.length) {
+              anim.index = 0;
+            }
+            this.frameNumber = anim.frameNumbers[anim.index];
+            anim.count = 0;
+          }
+        }
+      }
+
+      //プレイヤークラス
+      class Player extends Actor {
+        constructor(w, h) {
+          super(w, h);
+          this.image = core.resources[Resource.Player].texture;
+          this.position.set(
+            Config.Screen.Width * 0.5,
+            Config.Screen.Height * 0.75
+          );
+          this.maxSpeed = 4;
+          this.acceleration = 0.24;
+          this.friction = 0.08;
+          this.isOnGround = true;
+          this.gravity = 0.3;
+
+          this.animation.data = {
+            stand: {
+              frameNumbers: [1],
+              intervals: [100],
+            },
+            walk: {
+              frameNumbers: [0, 1, 2, 1],
+              intervals: [8, 8, 8, 8],
+            },
+            jump: {
+              frameNumbers: [4],
+              intervals: [100],
+            },
+            fall: {
+              frameNumbers: [5],
+              intervals: [100],
+            },
+          };
+          this.animation.type = "stand";
+          this.animation.isPlayAuto = true;
+        }
+        update(delta) {
+          super.update(delta);
+          this.posRestoreFractionalPart(); //一番最初に小数点を戻す
+
+          const btn = inputManager.checkButton("A");
+          if (btn == inputManager.keyStatus.DOWN) {
+            if (this.isOnGround) {
+              this.vy = -8;
+              this.changeAnimationPattern("jump");
+            }
+          }
+          if (btn == inputManager.keyStatus.RELEASE) {
+            if (this.vy < 0) {
+              this.vy /= 2;
+            }
+          }
+          this.isOnGround = false;
+          this.vy += this.gravity;
+          this.y += this.vy;
+          if (this.y > Config.Screen.Height * 0.75) {
+            this.y = Config.Screen.Height * 0.75;
+            this.vy = 0;
+            this.isOnGround = true;
+            if (this.animation.type != "walk") {
+              this.changeAnimationPattern("walk");
+            }
+          } else if (this.vy > 0 && this.animation.type != "fall") {
+            this.changeAnimationPattern("fall");
+          }
+
+          switch (inputManager.checkDirection()) {
+            case inputManager.keyDirections.RIGHT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x = 1;
+              this.vx += this.acceleration;
+              this.vx = this.vx > this.maxSpeed ? this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.LEFT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x = -1;
+              this.vx -= this.acceleration;
+              this.vx = this.vx < -this.maxSpeed ? -this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.DOWN:
+              break;
+            default:
+              break;
+          }
+
+          //摩擦的なもの(減速させる)
+          if (this.vx > this.friction) {
+            this.vx -= this.friction;
+          } else if (this.vx < -this.friction) {
+            this.vx += this.friction;
+          } else {
+            this.vx = 0;
+            if (this.isOnGround) {
+              this.changeAnimationPattern("stand");
+            }
+          }
+          this.x += this.vx;
+          this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
+        }
+      }
+    </script>
+  </body>
+</html>
