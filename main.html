@@ -28,31 +28,32 @@
     <script>
       //設定用
       const Config = {
-        //画面の解像度
         Screen: {
-          Width: 512, //幅
-          Height: 512, //高さ
-          BackGroundColor: 0xeaf4fc, //背景色
+          Width: 512,
+          Height: 512,
+          BackGroundColor: "black",
         },
         Keys: {
-          //キーボード入力
           Up: "w",
           Right: "d",
           Down: "s",
           Left: "a",
-          A: "ArrowLeft",
-          B: "ArrowUp",
+          A: "t",
+          B: "r",
           Start: "Enter",
           Up2: "ArrowUp",
           Right2: "ArrowRight",
           Down2: "ArrowDown",
           Left2: "ArrowLeft",
+          A2: "n",
+          B2: "m",
         },
       };
 
       //読みこむデータリスト(名前：ファイルパス)
       const Resource = {
         Player: "./character.bmp",
+        Bullet: "./2024-05-13 23.28.32（2）.png",
       };
 
       //上のリストを読み込みやすい形に変えてます
@@ -85,31 +86,72 @@
 
       let player;
       let player2;
-      //メインシーン
+
+      ///////////////メインシーン//////////////////////////////////////////////////s
       class MainScene extends Container {
         constructor() {
           super();
 
-          player = new Player(32, 32);
-          this.addChild(player);
+          this.player = new Player(32, 32);
+          this.addChild(this.player);
 
-          player2 = new Player2(32, 32);
-          this.addChild(player2);
+          this.player2 = new Player2(32, 32);
+          this.addChild(this.player2);
+
+          this.shootImages = [];
+
+          this.shootSpeed = 5; // 弾の速度
         }
 
         update(delta) {
           super.update(delta);
-          // inputManager.gamePad.update();
 
+          // Aボタンが押されたときの処理
           if (
-            inputManager.checkButton("Start") == inputManager.keyStatus.DOWN
+            inputManager.checkButton(1, "A") === inputManager.keyStatus.DOWN
           ) {
-            core.pushScene(new PauseScene());
+            const shootImage = new PIXI.Sprite(
+              PIXI.Texture.from(Resource.Bullet)
+            );
+            shootImage.position.set(
+              this.player.x + this.player.width,
+              this.player.y
+            );
+            shootImage.directionX = Math.sign(this.player2.x - this.player.x); // プレイヤー2の方向に飛ばす
+            this.addChild(shootImage);
+            this.shootImages.push(shootImage);
+          }
+
+          // A2ボタンが押されたときの処理
+          if (
+            inputManager.checkButton(2, "A2") === inputManager.keyStatus.DOWN
+          ) {
+            const shootImage = new PIXI.Sprite(
+              PIXI.Texture.from(Resource.Bullet)
+            );
+            shootImage.position.set(
+              this.player2.x - this.player2.width,
+              this.player2.y
+            );
+            shootImage.directionX = -Math.sign(this.player2.x - this.player.x); // プレイヤー1の方向に飛ばす
+            this.addChild(shootImage);
+            this.shootImages.push(shootImage);
+          }
+
+          // 画像が表示されている場合の移動処理
+          for (let i = this.shootImages.length - 1; i >= 0; i--) {
+            const shootImage = this.shootImages[i];
+            shootImage.x += shootImage.directionX * this.shootSpeed;
+
+            // 画面の端まで到達したら非表示にする
+            if (shootImage.x < 0 || shootImage.x > Config.Screen.Width) {
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+            }
           }
         }
       }
-
-      //全キャラクター共通基本クラス
+      ///////////////全キャラクター共通基本クラス////////////////////////////////////
       class Actor extends EnchantSprite {
         constructor(w, h) {
           super(w, h);
@@ -168,7 +210,7 @@
         }
       }
 
-      //プレイヤークラス
+      ///////////////プレイヤークラス////////////////////////////////////
       class Player extends Actor {
         constructor(w, h) {
           super(w, h);
@@ -182,6 +224,8 @@
           this.friction = 0.08;
           this.isOnGround = true;
           this.gravity = 0.3;
+
+          this.projectiles = [];
 
           this.animation.data = {
             stand: {
@@ -208,7 +252,7 @@
           super.update(delta);
           this.posRestoreFractionalPart(); //一番最初に小数点を戻す
 
-          const btn = inputManager.checkButton("Up");
+          const btn = inputManager.checkButton(1, "Up");
           if (btn == inputManager.keyStatus.DOWN) {
             if (this.isOnGround) {
               this.vy = -8;
@@ -234,7 +278,7 @@
             this.changeAnimationPattern("fall");
           }
 
-          switch (inputManager.checkDirection()) {
+          switch (inputManager.checkDirection(1)) {
             case inputManager.keyDirections.RIGHT:
               if (this.isOnGround && this.vx == 0) {
                 this.changeAnimationPattern("walk");
@@ -269,11 +313,25 @@
             }
           }
           this.x += this.vx;
+
+          // 弾の更新
+          // if (this.projectiles) {
+          //   this.projectiles.forEach((projectile) => projectile.update(delta));
+          //   this.projectiles = this.projectiles.filter(
+          //     (projectile) => !projectile.isDestroyed
+          //   );
+          // }
+
           this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
         }
+        // shoot() {
+        //   const direction = this.scale.x; // プレイヤーの向きに応じて弾の方向を設定
+        //   let projectile = new Projectile(this.x, this.y, direction);
+        //   this.projectiles.push(projectile);
+        // }
       }
 
-      //プレイヤークラス
+      ///////////////プレイヤー2クラス////////////////////////////////////
       class Player2 extends Actor {
         constructor(w, h) {
           super(w, h);
@@ -313,7 +371,7 @@
           super.update(delta);
           this.posRestoreFractionalPart(); //一番最初に小数点を戻す
 
-          const btn = inputManager.checkButton("B");
+          const btn = inputManager.checkButton(2, "Up2");
           if (btn == inputManager.keyStatus.DOWN) {
             if (this.isOnGround) {
               this.vy = -8;
@@ -339,7 +397,7 @@
             this.changeAnimationPattern("fall");
           }
 
-          switch (inputManager.checkDirection()) {
+          switch (inputManager.checkDirection(2)) {
             case inputManager.keyDirections.RIGHT:
               if (this.isOnGround && this.vx == 0) {
                 this.changeAnimationPattern("walk");

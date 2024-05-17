@@ -23,7 +23,7 @@ class InputManager {
       RELEASE: -1,
     };
     //キーの状態管理用変数
-    this.input = {
+    this.input_Player1 = {
       //入力されたキーのチェック用
       keys: {
         Up: false,
@@ -42,99 +42,158 @@ class InputManager {
         Left: false,
         A: false,
         B: false,
-        Start: false
+      },
+    };
+     this.input_Player2 = {
+      //入力されたキーのチェック用
+      keys: {
+        Up2: false,
+        Right2: false,
+        Down2: false,
+        Left2: false,
+        A2: false,
+        B2: false,
+      },
+      //一つ前のキーの状態管理用
+      keysPrev: {
+        Up2: false,
+        Right2: false,
+        Down2: false,
+        Left2: false,
+        A2: false,
+        B2: false,
       },
     };
     //キーを押した時
     document.addEventListener('keydown', (e) => {
-      console.log(e.key);
       e.preventDefault();
       switch(e.key){
         case Config.Keys.Up:
-          this.input.keys.Up = true;
+          this.input_Player1.keys.Up = true;
           break;
         case Config.Keys.Down:
-          this.input.keys.Down = true;
+          this.input_Player1.keys.Down = true;
           break;
         case Config.Keys.Right:
-          this.input.keys.Right = true;
+          this.input_Player1.keys.Right = true;
           break;
         case Config.Keys.Left:
-          this.input.keys.Left = true;
+          this.input_Player1.keys.Left = true;
           break;
         case Config.Keys.A:
-          this.input.keys.A = true;
+          this.input_Player1.keys.A = true;
           break;
         case Config.Keys.B:
-          this.input.keys.B = true;
+          this.input_Player1.keys.B = true;
           break;
         case Config.Keys.Start:
-          this.input.keys.Start = true;
+          this.input_Player1.keys.Start = true;
+          break;
+        case Config.Keys.Up2:
+          this.input_Player2.keys.Up2 = true;
+          break;
+        case Config.Keys.Down2:
+          this.input_Player2.keys.Down2 = true;
+          break;
+        case Config.Keys.Right2:
+          this.input_Player2.keys.Right2 = true;
+          break;
+        case Config.Keys.Left2:
+          this.input_Player2.keys.Left2 = true;
+          break;
+        case Config.Keys.A2:
+          this.input_Player2.keys.A2 = true;
+          break;
+        case Config.Keys.B2:
+          this.input_Player2.keys.B2 = true;
           break;
       }
     });
 
     //キーを離したとき
+
     document.addEventListener('keyup', (e) => {
       e.preventDefault();
       switch(e.key){
         case Config.Keys.Up:
-          this.input.keys.Up = false;
+          this.input_Player1.keys.Up = false;
           break;
         case Config.Keys.Down:
-          this.input.keys.Down = false;
+          this.input_Player1.keys.Down = false;
           break;
         case Config.Keys.Right:
-          this.input.keys.Right = false;
+          this.input_Player1.keys.Right = false;
           break;
         case Config.Keys.Left:
-          this.input.keys.Left = false;
+          this.input_Player1.keys.Left = false;
           break;
         case Config.Keys.A:
-          this.input.keys.A = false;
+          this.input_Player1.keys.A = false;
           break;
         case Config.Keys.B:
-          this.input.keys.B = false;
+          this.input_Player1.keys.B = false;
           break;
         case Config.Keys.Start:
-          this.input.keys.Start = false;
+          this.input_Player1.keys.Start = false;
+          break;
+        case Config.Keys.Up2:
+          this.input_Player2.keys.Up2 = false;
+          break;
+        case Config.Keys.Down2:
+          this.input_Player2.keys.Down2 = false;
+          break;
+        case Config.Keys.Right2:
+          this.input_Player2.keys.Right2 = false;
+          break;
+        case Config.Keys.Left2:
+          this.input_Player2.keys.Left2 = false;
+          break;
+        case Config.Keys.A2:
+          this.input_Player2.keys.A2 = false;
+          break;
+        case Config.Keys.B2:
+          this.input_Player2.keys.B2 = false;
           break;
       }
     });
   }
 
   //方向キー入力チェック
-  checkDirection() {
+  checkDirection(player) {
     let direction = 0;//初期化
-    if(this.input.keys.Up){
+    const input = player === 1 ? this.input_Player1.keys : this.input_Player2.keys;
+    if(input.Up||input.Up2){
         direction += this.keyDirections.UP;
     }
-    if(this.input.keys.Right){
+    if(input.Right||input.Right2){
       direction += this.keyDirections.RIGHT;
     }
-    if(this.input.keys.Down){
+    if(input.Down||input.Down2){
       direction += this.keyDirections.DOWN;
     }
-    if(this.input.keys.Left){
+    if(input.Left||input.Left2){
       direction += this.keyDirections.LEFT;
     }
     return direction;
   }
 
   //ボタンの入力状態をチェックして返す
-  checkButton(key) {
-    if(this.input.keys[key]){
-      if(this.input.keysPrev[key] == false){
-        this.input.keysPrev[key] = true;
-        return this.keyStatus.DOWN;//押されたとき
+  checkButton(player, key) {
+    const input = player === 1 ? this.input_Player1.keys : this.input_Player2.keys;
+    const inputPrev = player === 1 ? this.input_Player1.keysPrev : this.input_Player2.keysPrev;
+
+    if(input[key]) {
+      if(!inputPrev[key]) {
+        inputPrev[key] = true;
+        return this.keyStatus.DOWN;
       }
-      return this.keyStatus.HOLD;//押しっぱなし
-    }else{
-      if(this.input.keysPrev[key] == true){
-        this.input.keysPrev[key] = false;
-        return this.keyStatus.RELEASE;//ボタンを離した時
+      return this.keyStatus.HOLD;
+    } else {
+      if(inputPrev[key]) {
+        inputPrev[key] = false;
+        return this.keyStatus.RELEASE;
       }
-      return this.keyStatus.UNDOWN;//押されていない
+      return this.keyStatus.UNDOWN;
     }
   }
 }
