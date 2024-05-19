@@ -61,7 +61,7 @@
       </div>
       <div id="win-message">Player 1 WIN</div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
     <script src="./chara.js"></script>
     <script src="./code.js"></script>
@@ -94,6 +94,8 @@
       const Resource = {
         Player: "./character.bmp",
         Bullet: "./hadoken.gif",
+        BGM:"./Fight_BGM.mp3", // BGMの追加
+        SE:"./hadoken.wav"
       };
 
       //上のリストを読み込みやすい形に変えてます
@@ -164,6 +166,8 @@
           }
         }
       }
+ // すべてのアニメーションを停止する関数
+
 // 勝利メッセージを表示する関数
       function displayWinMessage(message) {
         const winMessage = document.getElementById("win-message");
@@ -188,8 +192,9 @@
           this.shootImages = [];
 
           this.shootSpeed = 5; // 弾の速度
-        }
 
+          PIXI.sound.play(Resource.BGM,{loop:true});
+        }
         update(delta) {
           if (gameOver) return; // ゲームオーバーなら更新しない
           super.update(delta);
@@ -211,6 +216,7 @@
             shootImage.shooter = "player1";
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
+            PIXI.sound.play(Resource.SE);
             // プレイヤー2にダメージを与える
             // reduceHealth("player2", 10);
           }
@@ -232,6 +238,7 @@
             shootImage.shooter = "player2";
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
+            PIXI.sound.play(Resource.SE);
             // プレイヤー1にダメージを与える
             // reduceHealth("player1", 10);
           }
