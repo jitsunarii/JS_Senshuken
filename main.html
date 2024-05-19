@@ -38,6 +38,17 @@
         height: 100%;
         background-color: green;
       }
+
+      /* 勝利メッセージ */
+      #win-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 32px;
+        color: white;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -47,7 +58,9 @@
     <div id="player2-health-bar" class="health-bar">
       <div id="player2-health" class="health" style="width: 100%"></div>
     </div>
-
+      </div>
+      <div id="win-message">Player 1 WIN</div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
     <script src="./chara.js"></script>
@@ -106,7 +119,7 @@
         core.preload(assets);
 
         //読み込み完了でメインシーンに切り替え
-        core.onload = () => {
+        core.onload =function(){
           core.replaceScene(new MainScene());
         };
       };
@@ -122,7 +135,7 @@
 
       // 体力バーの更新関数
       function updateHealthBar(player, health) {
-        const healthBar = document.getElementById(`${player}-health`);
+         const healthBar = document.getElementById(`${player}-health`);
         healthBar.style.width = `${health}%`;
 
         // 体力が50%未満になった場合、色を赤に変更します
@@ -140,25 +153,24 @@
           updateHealthBar("player1", player1Health);
           if (player1Health === 0) {
             gameOver = true;
-            stopAllAnimations();
+            displayWinMessage("Player 2 WIN"); // Player 2の勝利メッセージを表示
           }
         } else if (player === "player2") {
           player2Health = Math.max(player2Health - damage, 0);
           updateHealthBar("player2", player2Health);
           if (player2Health === 0) {
             gameOver = true;
-            stopAllAnimations();
+            displayWinMessage("Player 1 WIN");
           }
         }
       }
-      // すべてのアニメーションを停止する関数
-      function stopAllAnimations() {
-        core.ticker.stop(); // PIXI.jsのtickerを停止
+// 勝利メッセージを表示する関数
+      function displayWinMessage(message) {
+        const winMessage = document.getElementById("win-message");
+        winMessage.innerText = message;
+        winMessage.style.display = "block";
       }
 
-      //初期状態の体力バーを設定
-      updateHealthBar("player1", player1Health);
-      updateHealthBar("player2", player2Health);
       //初期状態の体力バーを設定
       updateHealthBar("player1", player1Health);
       updateHealthBar("player2", player2Health);
