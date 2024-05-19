@@ -18,9 +18,36 @@
       #game-screen {
         margin: 0 auto;
       }
+
+      /* 体力バー */
+      .health-bar {
+        width: 200px;
+        height: 20px;
+        background-color: grey;
+        border: 1px solid #000;
+        position: absolute;
+        top: 10px;
+      }
+      #player1-health-bar {
+        left: 10px;
+      }
+      #player2-health-bar {
+        right: 10px;
+      }
+      .health {
+        height: 100%;
+        background-color: green;
+      }
     </style>
   </head>
   <body>
+    <div id="player1-health-bar" class="health-bar">
+      <div id="player1-health" class="health" style="width: 100%"></div>
+    </div>
+    <div id="player2-health-bar" class="health-bar">
+      <div id="player2-health" class="health" style="width: 100%"></div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
     <script src="./chara.js"></script>
@@ -53,7 +80,7 @@
       //読みこむデータリスト(名前：ファイルパス)
       const Resource = {
         Player: "./character.bmp",
-        Bullet: "./2024-05-13 23.28.32（2）.png",
+        Bullet: "./hadoken.gif",
       };
 
       //上のリストを読み込みやすい形に変えてます
@@ -65,7 +92,7 @@
       let core; //ゲームの基幹プログラム用の変数
       let inputManager;
 
-      //ブラウザの読み込みが完了したら実行されます
+      //ブラウザの読み込みが完了したら実行
       window.onload = () => {
         //設定した画面サイズでcoreを作成
         core = new Game(
@@ -78,7 +105,7 @@
         //データのロード
         core.preload(assets);
 
-        //読み込み完了でメインシーンに切り替わります
+        //読み込み完了でメインシーンに切り替え
         core.onload = () => {
           core.replaceScene(new MainScene());
         };
@@ -86,7 +113,55 @@
 
       let player;
       let player2;
+      //体力バーの初期設定
+      let player1Health = 100;
+      let player2Health = 100;
 
+      // ゲームオーバーフラグ
+      let gameOver = false;
+
+      // 体力バーの更新関数
+      function updateHealthBar(player, health) {
+        const healthBar = document.getElementById(`${player}-health`);
+        healthBar.style.width = `${health}%`;
+
+        // 体力が50%未満になった場合、色を赤に変更します
+        if (health < 50) {
+          healthBar.style.backgroundColor = "red";
+        } else {
+          healthBar.style.backgroundColor = "green";
+        }
+      }
+
+      // 体力を減らす関数
+      function reduceHealth(player, damage) {
+        if (player === "player1") {
+          player1Health = Math.max(player1Health - damage, 0);
+          updateHealthBar("player1", player1Health);
+          if (player1Health === 0) {
+            gameOver = true;
+            stopAllAnimations();
+          }
+        } else if (player === "player2") {
+          player2Health = Math.max(player2Health - damage, 0);
+          updateHealthBar("player2", player2Health);
+          if (player2Health === 0) {
+            gameOver = true;
+            stopAllAnimations();
+          }
+        }
+      }
+      // すべてのアニメーションを停止する関数
+      function stopAllAnimations() {
+        core.ticker.stop(); // PIXI.jsのtickerを停止
+      }
+
+      //初期状態の体力バーを設定
+      updateHealthBar("player1", player1Health);
+      updateHealthBar("player2", player2Health);
+      //初期状態の体力バーを設定
+      updateHealthBar("player1", player1Health);
+      updateHealthBar("player2", player2Health);
       ///////////////メインシーン//////////////////////////////////////////////////s
       class MainScene extends Container {
         constructor() {
@@ -104,6 +179,7 @@
         }
 
         update(delta) {
+          if (gameOver) return; // ゲームオーバーなら更新しない
           super.update(delta);
 
           // Aボタンが押されたときの処理
@@ -113,13 +189,18 @@
             const shootImage = new PIXI.Sprite(
               PIXI.Texture.from(Resource.Bullet)
             );
+            shootImage.width = 100;
+            shootImage.height = 100;
             shootImage.position.set(
-              this.player.x + this.player.width,
-              this.player.y
+              this.player.x - this.player.width,
+              this.player.y - 70
             );
             shootImage.directionX = Math.sign(this.player2.x - this.player.x); // プレイヤー2の方向に飛ばす
+            shootImage.shooter = "player1";
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
+            // プレイヤー2にダメージを与える
+            // reduceHealth("player2", 10);
           }
 
           // A2ボタンが押されたときの処理
@@ -129,13 +210,18 @@
             const shootImage = new PIXI.Sprite(
               PIXI.Texture.from(Resource.Bullet)
             );
+            shootImage.width = 100;
+            shootImage.height = 100;
             shootImage.position.set(
-              this.player2.x - this.player2.width,
-              this.player2.y
+              this.player2.x - this.player2.width - 36,
+              this.player2.y - 70
             );
             shootImage.directionX = -Math.sign(this.player2.x - this.player.x); // プレイヤー1の方向に飛ばす
+            shootImage.shooter = "player2";
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
+            // プレイヤー1にダメージを与える
+            // reduceHealth("player1", 10);
           }
 
           // 画像が表示されている場合の移動処理
@@ -143,12 +229,41 @@
             const shootImage = this.shootImages[i];
             shootImage.x += shootImage.directionX * this.shootSpeed;
 
+            // 当たり判定のチェック
+            if (
+              shootImage.shooter === "player1" &&
+              this.checkCollision(shootImage, this.player2)
+            ) {
+              reduceHealth("player2", 10);
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+              continue;
+            } else if (
+              shootImage.shooter === "player2" &&
+              this.checkCollision(shootImage, this.player)
+            ) {
+              reduceHealth("player1", 10);
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+              continue;
+            }
             // 画面の端まで到達したら非表示にする
             if (shootImage.x < 0 || shootImage.x > Config.Screen.Width) {
               this.removeChild(shootImage);
               this.shootImages.splice(i, 1);
             }
           }
+        }
+        // 当たり判定の関数
+        checkCollision(bullet, player) {
+          const bulletBounds = bullet.getBounds();
+          const playerBounds = player.getBounds();
+          return (
+            bulletBounds.x < playerBounds.x + playerBounds.width &&
+            bulletBounds.x + bulletBounds.width > playerBounds.x &&
+            bulletBounds.y < playerBounds.y + playerBounds.height &&
+            bulletBounds.y + bulletBounds.height > playerBounds.y
+          );
         }
       }
       ///////////////全キャラクター共通基本クラス////////////////////////////////////
@@ -197,6 +312,7 @@
           this.y += this.fpY;
         }
         update(delta) {
+          if (gameOver) return;
           super.update(delta);
           //自動アニメーション処理
           const anim = this.animation;
@@ -210,7 +326,7 @@
         }
       }
 
-      ///////////////プレイヤークラス////////////////////////////////////
+      //////////////////////プレイヤークラス////////////////////////////////////
       class Player extends Actor {
         constructor(w, h) {
           super(w, h);
@@ -249,6 +365,7 @@
           this.animation.isPlayAuto = true;
         }
         update(delta) {
+          if (gameOver) return;
           super.update(delta);
           this.posRestoreFractionalPart(); //一番最初に小数点を戻す
 
@@ -313,22 +430,8 @@
             }
           }
           this.x += this.vx;
-
-          // 弾の更新
-          // if (this.projectiles) {
-          //   this.projectiles.forEach((projectile) => projectile.update(delta));
-          //   this.projectiles = this.projectiles.filter(
-          //     (projectile) => !projectile.isDestroyed
-          //   );
-          // }
-
           this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
         }
-        // shoot() {
-        //   const direction = this.scale.x; // プレイヤーの向きに応じて弾の方向を設定
-        //   let projectile = new Projectile(this.x, this.y, direction);
-        //   this.projectiles.push(projectile);
-        // }
       }
 
       ///////////////プレイヤー2クラス////////////////////////////////////
@@ -368,6 +471,7 @@
           this.animation.isPlayAuto = true;
         }
         update(delta) {
+          if (gameOver) return;
           super.update(delta);
           this.posRestoreFractionalPart(); //一番最初に小数点を戻す
 
