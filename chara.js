@@ -5,8 +5,8 @@ class Game {
     this.loadProgress = {loaded: 0};//ロード状況確認用
     //ゲーム画面作成
     const app = new PIXI.Application({ 
-      width: width, 
-      height: height,                       
+      width: width,
+      height: height,
       backgroundColor: color,
       resolution: 1,
       autoDensity: true

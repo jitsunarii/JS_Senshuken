@@ -98,14 +98,14 @@
         SE:"./hadoken.wav"
       };
 
-      //上のリストを読み込みやすい形に変えてます
+      //上のリストを読み込みやすい形にする
       const assets = [];
       for (let key in Resource) {
         assets.push(Resource[key]);
       }
-
-      let core; //ゲームの基幹プログラム用の変数
-      let inputManager;
+        let core;
+        let inputManager;
+      //  core; //ゲームの基幹プログラム用の変数
 
       //ブラウザの読み込みが完了したら実行
       window.onload = () => {
@@ -115,14 +115,14 @@
           Config.Screen.Height,
           Config.Screen.BackGroundColor
         );
-        inputManager = new InputManager();
-
+ inputManager = new InputManager();
         //データのロード
         core.preload(assets);
 
-        //読み込み完了でメインシーンに切り替え
+        //読み込み完了でタイトルシーンに切り替え
+///////////////////////////////////変更１/////////////////////////////////////
         core.onload =function(){
-          core.replaceScene(new MainScene());
+          core.replaceScene(new TitleScene());
         };
       };
 
@@ -140,7 +140,7 @@
          const healthBar = document.getElementById(`${player}-health`);
         healthBar.style.width = `${health}%`;
 
-        // 体力が50%未満になった場合、色を赤に変更します
+        // 体力が50%未満になった場合、色を赤に変更
         if (health < 50) {
           healthBar.style.backgroundColor = "red";
         } else {
@@ -166,8 +166,6 @@
           }
         }
       }
- // すべてのアニメーションを停止する関数
-
 // 勝利メッセージを表示する関数
       function displayWinMessage(message) {
         const winMessage = document.getElementById("win-message");
@@ -178,7 +176,39 @@
       //初期状態の体力バーを設定
       updateHealthBar("player1", player1Health);
       updateHealthBar("player2", player2Health);
-      ///////////////メインシーン//////////////////////////////////////////////////s
+      ///////////////タイトルシーン//////////////////////////////////////////////////
+      class TitleScene extends Container {
+        constructor() {
+          super();
+
+          const style = new PIXI.TextStyle({
+            fontFamily: "sans-serif",
+            fontSize: 50,
+            fill: 0xffffff,
+            fontWeight: "bold",
+            stroke: "red", //縁取りの色
+            strokeThickness: 4, //縁取りの太さ
+          });
+
+          const p = new PIXI.Text("FUKUOKAA", style);
+          p.anchor.set(0.5);
+          p.position.set(256, 50);
+          this.addChild(p);
+
+          const p_p = new PIXI.Text("FIGHTER", style);
+          p_p.anchor.set(0.5);
+          p_p.position.set(256, 100);
+          this.addChild(p_p);
+        }
+     update(delta) {
+          // Config.Keys.Startが押されたらメインシーンに切り替え
+         if (inputManager.checkButton(1, "Start") === inputManager.keyStatus.DOWN) {
+            core.replaceScene(new MainScene());
+            ;
+          }
+        }
+      }
+      ///////////////メインシーン//////////////////////////////////////////////////
       class MainScene extends Container {
         constructor() {
           super();
@@ -239,8 +269,6 @@
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
             PIXI.sound.play(Resource.SE);
-            // プレイヤー1にダメージを与える
-            // reduceHealth("player1", 10);
           }
 
           // 画像が表示されている場合の移動処理
@@ -558,6 +586,7 @@
           this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
         }
       }
+
     </script>
   </body>
 </html>
