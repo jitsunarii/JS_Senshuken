@@ -69,8 +69,8 @@
       //設定用
       const Config = {
         Screen: {
-          Width: 512,
-          Height: 512,
+          Width: 340,
+          Height: 340,
           BackGroundColor: "black",
         },
         Keys: {
@@ -92,8 +92,11 @@
 
       //読みこむデータリスト(名前：ファイルパス)
       const Resource = {
-        Player: "./character.bmp",
+        Title:"./kyushu-hakuchizu.png",
+        Player: "./character.png",
         Bullet: "./hadoken.gif",
+        OP_BGM:"./OP_BGM.mp3",
+        Title_BGM:"./Title_BGM.mp3",
         BGM:"./Fight_BGM.mp3", // BGMの追加
         SE:"./hadoken.wav"
       };
@@ -122,7 +125,7 @@
         //読み込み完了でタイトルシーンに切り替え
 ///////////////////////////////////変更１/////////////////////////////////////
         core.onload =function(){
-          core.replaceScene(new TitleScene());
+          core.replaceScene(new OpeningScene());
         };
       };
 
@@ -176,47 +179,191 @@
       //初期状態の体力バーを設定
       updateHealthBar("player1", player1Health);
       updateHealthBar("player2", player2Health);
-      ///////////////タイトルシーン//////////////////////////////////////////////////
-      class TitleScene extends Container {
-        constructor() {
-          super();
+      let push_Enter=false;
+////////////////////オープニングシーン///////////////////////////////////////////
+class OpeningScene extends Container {
+  constructor() {
+    super();
+    this.messages = [
+      "20XX年",
+      "九州",
+      "今日も県の誇りをかけ",
+      "壮絶な死闘が繰り広げられていた---"
+    ];
+    this.currentIndex = 0;
+    this.text = new PIXI.Text('', {
+      fontFamily: "Arial",
+      fontSize: 20,
+      fill: 0xffffff,
+      align: 'center'
+    });
+    this.text.anchor.set(0.5);
+    this.text.position.set(Config.Screen.Width / 2, Config.Screen.Height / 2);
+    this.addChild(this.text);
+    this.showMessage();
+    PIXI.sound.play(Resource.OP_BGM,{loop:true});
+      // エンターキーを押したときのイベントリスナーを追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener("keydown", this.onKeyDown);
+  }
 
-          const style = new PIXI.TextStyle({
-            fontFamily: "sans-serif",
-            fontSize: 50,
-            fill: 0xffffff,
-            fontWeight: "bold",
-            stroke: "red", //縁取りの色
-            strokeThickness: 4, //縁取りの太さ
-          });
+  showMessage() {
+    if (this.currentIndex < this.messages.length) {
+      this.text.text = this.messages[this.currentIndex];
+      this.text.alpha = 0;
+      this.currentIndex++;
+      this.fadeInText();
+    } else if(this.currentIndex >= this.messages.length&&push_Enter===false){
+    window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new TitleScene());
+    }
+  }
 
-          const p = new PIXI.Text("FUKUOKAA", style);
-          p.anchor.set(0.5);
-          p.position.set(256, 50);
-          this.addChild(p);
-
-          const p_p = new PIXI.Text("FIGHTER", style);
-          p_p.anchor.set(0.5);
-          p_p.position.set(256, 100);
-          this.addChild(p_p);
-        }
-     update(delta) {
-          // Config.Keys.Startが押されたらメインシーンに切り替え
-         if (inputManager.checkButton(1, "Start") === inputManager.keyStatus.DOWN) {
-            core.replaceScene(new MainScene());
-            ;
-          }
-        }
+  fadeInText() {
+    const fadeIn_Flame = 60; // フェードインのフレーム数
+    let fadeInCounter = 0;
+    
+    const fadeIn = () => {
+      if (fadeInCounter < fadeIn_Flame) {
+        this.text.alpha += 1 / fadeIn_Flame;
+        fadeInCounter++;
+        requestAnimationFrame(fadeIn);
+      } else {
+        setTimeout(() => {
+          this.fadeOutText();
+        }, 1000);
       }
+    };
+    
+    fadeIn();
+  }
+
+  fadeOutText() {
+    const fadeOut_Flame = 60; // フェードアウトのフレーム数
+    let fadeOutCounter = 0;
+
+    const fadeOut = () => {
+      if (fadeOutCounter < fadeOut_Flame) {
+        this.text.alpha -= 1 / fadeOut_Flame;
+        fadeOutCounter++;
+        requestAnimationFrame(fadeOut);
+      } else {
+        this.showMessage();
+      }
+    };
+
+    fadeOut();
+  }
+// エンターキーを押したときにタイトルシーンに移動する関数
+  onKeyDown(event) {
+    if (event.key === "Enter") {
+      push_Enter=true;
+       window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new TitleScene());
+    }
+  }
+
+  destroy(options) {
+    super.destroy(options);
+    window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
+  }
+}
+
+      class TitleScene extends Container {
+  constructor() {
+    super();
+    // 背景画像の設定
+    const img = new PIXI.Sprite.from("./kyushu-hakuchizu.png");
+    img.width = Config.Screen.Width;
+    img.height = Config.Screen.Height;
+    img.alpha = 0;
+    this.addChild(img);
+
+    const style = new PIXI.TextStyle({
+      fontFamily: "sans-serif",
+      fontSize: 50,
+      fill: 0xffffff,
+      fontWeight: "bold",
+      stroke: "red",
+      strokeThickness: 4,
+    });
+
+    // テキストオブジェクトの作成
+    this.textKYUSYU = new PIXI.Text("KYUSYU", style);
+    this.textKYUSYU.anchor.set(0.5);
+    this.textKYUSYU.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 - 50);
+    this.textKYUSYU.scale.set(3); // 最初は3倍の大きさ
+    this.textKYUSYU.alpha = 0;
+    this.addChild(this.textKYUSYU);
+
+    this.textFIGHTER = new PIXI.Text("FIGHTER", style);
+    this.textFIGHTER.anchor.set(0.5);
+    this.textFIGHTER.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 );
+    this.textFIGHTER.scale.set(3); // 最初は3倍の大きさ
+    this.textFIGHTER.alpha = 0;
+    this.addChild(this.textFIGHTER);
+
+    this.startAnimation(img, this.textKYUSYU, this.textFIGHTER);
+    // エンターキーを押したときのイベントリスナーを追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener("keydown", this.onKeyDown);
+  }
+
+  startAnimation(img, textKYUSYU, textFIGHTER) {
+    var self = this;
+    var fadeInDuration = 60; // フェードインのフレーム数
+    var scaleDuration = 60; // テキストのスケールアニメーションのフレーム数
+    var fadeInCounter = 0;
+    var scaleCounter = 0;
+
+    function fadeIn() {
+      if (fadeInCounter < fadeInDuration) {
+        img.alpha += 1 / fadeInDuration;
+        fadeInCounter++;
+        requestAnimationFrame(fadeIn);
+      } else {
+        textKYUSYU.alpha = 1;
+        textFIGHTER.alpha = 1;
+        scaleText();
+      }
+    }
+
+    function scaleText() {
+      if (scaleCounter < scaleDuration) {
+        var scaleValue = 3 - (2 / scaleDuration) * scaleCounter; // 3から1に縮小
+        textKYUSYU.scale.set(scaleValue);
+        textFIGHTER.scale.set(scaleValue);
+        scaleCounter++;
+        requestAnimationFrame(scaleText);
+      }
+    }
+
+    fadeIn();
+  }
+
+   onKeyDown(event) {
+    if (event.key === "Enter") {
+    // OP_BGMを停止する
+    PIXI.sound.stop(Resource.OP_BGM);
+      window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new MainScene());
+    }
+  }
+
+  destroy(options) {
+    super.destroy(options);
+    window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
+  }
+}
       ///////////////メインシーン//////////////////////////////////////////////////
       class MainScene extends Container {
         constructor() {
           super();
 
-          this.player = new Player(32, 32);
+          this.player = new Player(26, 30);
           this.addChild(this.player);
 
-          this.player2 = new Player2(32, 32);
+          this.player2 = new Player2(26, 29);
           this.addChild(this.player2);
 
           this.shootImages = [];
@@ -392,19 +539,19 @@
 
           this.animation.data = {
             stand: {
-              frameNumbers: [16],
+              frameNumbers: [17],
               intervals: [100],
             },
             walk: {
-              frameNumbers: [15, 16, 17, 16],
+              frameNumbers: [16, 17, 18, 17],
               intervals: [8, 8, 8, 8],
             },
             jump: {
-              frameNumbers: [16],
+              frameNumbers: [17],
               intervals: [100],
             },
             fall: {
-              frameNumbers: [16],
+              frameNumbers: [17],
               intervals: [100],
             },
           };
@@ -498,19 +645,19 @@
 
           this.animation.data = {
             stand: {
-              frameNumbers: [46],
+              frameNumbers: [49],
               intervals: [100],
             },
             walk: {
-              frameNumbers: [45, 46, 47, 46],
+              frameNumbers: [48, 49, 50, 49],
               intervals: [8, 8, 8, 8],
             },
             jump: {
-              frameNumbers: [46],
+              frameNumbers: [49],
               intervals: [100],
             },
             fall: {
-              frameNumbers: [46],
+              frameNumbers: [49],
               intervals: [100],
             },
           };
