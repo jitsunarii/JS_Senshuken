@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="jp">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style href="https://codepen.io/inwan78/pen/WNJEKeQ.css"></style>
+    <style>
+      CSS JSResult Skip Results Iframe EDIT ON * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: white;
+      }
+
+      /*ゲーム画面*/
+      #game-screen {
+        margin: 0 auto;
+      }
+
+      /* 体力バー */
+      .health-bar {
+        width: 200px;
+        height: 20px;
+        background-color: grey;
+        border: 1px solid #000;
+        position: absolute;
+        top: 10px;
+      }
+      #player1-health-bar {
+        left: 10px;
+      }
+      #player2-health-bar {
+        right: 10px;
+      }
+      .health {
+        height: 100%;
+        background-color: green;
+      }
+      #hide{
+        text-align: center;
+      }
+
+      /* 勝利メッセージ */
+      #win-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 32px;
+        color: red;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="player1-health-bar" class="health-bar" style="display: none;">
+      <div id="player1-health" class="health" style="width: 100%;"></div>
+    </div>
+    <div id="player2-health-bar" class="health-bar" style="display: none;">
+      <div id="player2-health" class="health" style="width: 100%"></div>
+    </div>
+      </div>
+      <div id="win-message">Player 1 WIN</div>
+      <div id="hide" style="display: none;">
+        <button>上京する</button>
+      </div>
+    </div>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
+    <script src="./chara.js"></script>
+    <script src="./code.js"></script>
+    <script>
+      //設定用
+      const Config = {
+        Screen: {
+          Width: 340,
+          Height: 340,
+          BackGroundColor: "black",
+        },
+        Keys: {
+          Up: "w",
+          Right: "d",
+          Down: "s",
+          Left: "a",
+          A: "t",
+          B: "r",
+          Start: "Enter",
+          Up2: "ArrowUp",
+          Right2: "ArrowRight",
+          Down2: "ArrowDown",
+          Left2: "ArrowLeft",
+          A2: "n",
+          B2: "m",
+        },
+      };
+
+      //読みこむデータリスト(名前：ファイルパス)
+      const Resource = {
+        Title:"./kyushu-hakuchizu.png",
+        Player: "./character.png",
+        Bullet: "./hadoken.gif",
+        Bullet2:"./mirror.hado.gif",
+        OP_BGM:"./OP_BGM.mp3",
+        Title_BGM:"./Title_BGM.mp3",
+        BGM:"./main_BGM.mp3", // BGMの追加
+        SE:"./hadoken.wav",
+        SELECT:"./SELECT2.mp3",
+        ENTER:"./ENTER2.mp3",
+      };
+
+      //上のリストを読み込みやすい形にする
+      const assets = [];
+      for (let key in Resource) {
+        assets.push(Resource[key]);
+      }
+        let core;
+        let inputManager;
+
+      //ブラウザの読み込みが完了したら実行
+      window.onload = () => {
+        //設定した画面サイズでcoreを作成
+        core = new Game(
+          Config.Screen.Width,
+          Config.Screen.Height,
+          Config.Screen.BackGroundColor
+        );
+inputManager = new InputManager();
+        //データのロード
+        core.preload(assets);
+        core.onload =function(){
+          //Opening画面に移動
+          core.replaceScene(new OpeningScene());
+        };
+      };
+
+      let player;
+      let player2;
+      //体力バーの初期設定
+      let player1Health = 100;
+       let player2Health = 100;
+
+      // ゲームオーバーフラグ
+      let gameOver = false;
+
+      // 体力バーの更新関数
+      function updateHealthBar(player, health) {
+         const healthBar = document.getElementById(`${player}-health`);
+        healthBar.style.width = `${health}%`;
+
+        // 体力が50%未満になった場合、色を赤に変更
+        if (health < 50) {
+          healthBar.style.backgroundColor = "red";
+        } else {
+          healthBar.style.backgroundColor = "green";
+        }
+      }
+
+      // 体力を減らす関数
+      function reduceHealth(player, damage) {
+        if (player === "player1") {
+          player1Health = Math.max(player1Health - damage, 0);
+          updateHealthBar("player1", player1Health);
+          if (player1Health === 0) {
+            gameOver = true;
+            displayWinMessage("Player 2 WIN"); // Player 2の勝利メッセージを表示
+          }
+        } else if (player === "player2") {
+          player2Health = Math.max(player2Health - damage, 0);
+          updateHealthBar("player2", player2Health);
+          if (player2Health === 0) {
+            gameOver = true;
+            displayWinMessage("Player 1 WIN");
+          }
+        }
+      }
+// 勝利メッセージを表示する関数
+      function displayWinMessage(message) {
+        const winMessage = document.getElementById("win-message");
+        winMessage.innerText = message;
+        winMessage.style.display = "block";
+      }
+
+      // //初期状態の体力バーを設
+      
+       updateHealthBar("player1", player1Health);
+       updateHealthBar("player2", player2Health);
+       let push_Enter=false;
+////////////////////オープニングシーン///////////////////////////////////////////
+class OpeningScene extends Container {
+  constructor() {
+    super();
+    this.messages = [
+      "20XX年",
+      "九州",
+      "今宵も県の誇りをかけ",
+      "壮絶な死闘が繰り広げられていた---"
+    ];
+    this.currentIndex = 0;
+    this.text = new PIXI.Text('', {
+      fontFamily: "Arial",
+      fontSize: 20,
+      fill: 0xffffff,
+      align: 'center'
+    });
+    this.text.anchor.set(0.5);
+    this.text.position.set(Config.Screen.Width / 2, Config.Screen.Height / 2);
+    this.addChild(this.text);
+    this.showMessage();
+    PIXI.sound.play(Resource.OP_BGM,{loop:true});
+      // エンターキーを押したときのイベントリスナーを追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener("keydown", this.onKeyDown);
+  }
+
+  showMessage() {
+    if (this.currentIndex < this.messages.length) {
+      this.text.text = this.messages[this.currentIndex];
+      this.text.alpha = 0;
+      this.currentIndex++;
+      this.fadeInText();
+    } else if(this.currentIndex >= this.messages.length&&push_Enter===false){
+    window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new TitleScene());
+    }
+  }
+
+  fadeInText() {
+    const fadeIn_Flame = 60; // フェードインのフレーム数
+    let fadeInCounter = 0;
+    
+    const fadeIn = () => {
+      if (fadeInCounter < fadeIn_Flame) {
+        this.text.alpha += 1 / fadeIn_Flame;
+        fadeInCounter++;
+        requestAnimationFrame(fadeIn);
+      } else {
+        setTimeout(() => {
+          this.fadeOutText();
+        }, 1000);
+      }
+    };
+    
+    fadeIn();
+  }
+
+  fadeOutText() {
+    const fadeOut_Flame = 60; // フェードアウトのフレーム数
+    let fadeOutCounter = 0;
+
+    const fadeOut = () => {
+      if (fadeOutCounter < fadeOut_Flame) {
+        this.text.alpha -= 1 / fadeOut_Flame;
+        fadeOutCounter++;
+        requestAnimationFrame(fadeOut);
+      } else {
+        this.showMessage();
+      }
+    };
+
+    fadeOut();
+  }
+// エンターキーを押したときにタイトルシーンに移動する関数
+  onKeyDown(event) {
+    if (event.key === "Enter") {
+      push_Enter=true;
+       window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new TitleScene());
+    }
+  }
+
+  destroy(options) {
+    super.destroy(options);
+    window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
+  }
+}
+//////////////////////////////タイトルシーン///////////////////////////////////////////////
+class TitleScene extends Container {
+  constructor() {
+    super();
+    // 背景画像の設定
+    const img = new PIXI.Sprite.from("./kyushu-hakuchizu.png");
+    img.width = Config.Screen.Width;
+    img.height = Config.Screen.Height;
+    img.alpha = 0;
+    this.addChild(img);
+
+    const style = new PIXI.TextStyle({
+      fontFamily: "sans-serif",
+      fontSize: 50,
+      fill: 0xffffff,
+      fontWeight: "bold",
+      stroke: "red",
+      strokeThickness: 4,
+    });
+
+    // テキストオブジェクトの作成
+    this.textKYUSYU = new PIXI.Text("KYUSYU", style);
+    this.textKYUSYU.anchor.set(0.5);
+    this.textKYUSYU.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 - 50);
+    this.textKYUSYU.scale.set(3); // 最初は3倍の大きさ
+    this.textKYUSYU.alpha = 0;
+    this.addChild(this.textKYUSYU);
+
+    this.textFIGHTER = new PIXI.Text("FIGHTER", style);
+    this.textFIGHTER.anchor.set(0.5);//0.5になる
+    this.textFIGHTER.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 );
+    this.textFIGHTER.scale.set(3); // 最初は3倍の大きさ
+    this.textFIGHTER.alpha = 0;
+    this.addChild(this.textFIGHTER);
+
+    this.startAnimation(img, this.textKYUSYU, this.textFIGHTER);
+    // エンターキーを押したときのイベントリスナーを追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener("keydown", this.onKeyDown);
+  }
+
+  startAnimation(img, textKYUSYU, textFIGHTER) {
+    var self = this;
+    var fadeInDuration = 60; // フェードインのフレーム数
+    var scaleDuration = 60; // テキストのスケールアニメーションのフレーム数
+    var fadeInCounter = 0;
+    var scaleCounter = 0;
+
+    function fadeIn() {
+      if (fadeInCounter < fadeInDuration) {
+        img.alpha += 1 / fadeInDuration;
+        fadeInCounter++;
+        requestAnimationFrame(fadeIn);
+      } else {
+        textKYUSYU.alpha = 1;
+        textFIGHTER.alpha = 1;
+        scaleText();
+      }
+    }
+
+    function scaleText() {
+      if (scaleCounter < scaleDuration) {
+        var scaleValue = 3 - (2 / scaleDuration) * scaleCounter; // 3から1に縮小
+        textKYUSYU.scale.set(scaleValue);
+        textFIGHTER.scale.set(scaleValue);
+        scaleCounter++;
+        requestAnimationFrame(scaleText);
+      }
+    }
+
+    fadeIn();
+  }
+
+   onKeyDown(event) {
+    if (event.key === "Enter") {
+    
+      window.removeEventListener("keydown", this.onKeyDown);
+      core.replaceScene(new CharacterSelectScene());
+    }
+  }
+
+  destroy(options) {
+    super.destroy(options);
+    window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
+  }
+}
+/////////////////キャラクターセレクト////////////////////////////////////////
+class CharacterSelectScene extends Container {
+  constructor() {
+    super();
+
+    // キャラクター画像のロード
+    const characterImages = [
+      './chara_Fukuoka.png',
+      './chara_Nagasaki.png',
+      './chara_Oita.png',
+
+    ];
+const style = new PIXI.TextStyle({
+      fontFamily: "sans-serif",
+      fontSize: 25,
+      fill: 0xffffff,
+      fontWeight: "bold",
+      stroke: "red",
+      strokeThickness: 4,
+    });
+
+
+this.textSelect= new PIXI.Text("Select your character",style);
+    this.textSelect.anchor.set(0.5);
+    this.textSelect.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 - 50);
+    this.characters = [];
+    this.addChild(this.textSelect);
+
+    // 県の画像設定
+    characterImages.forEach((imagePath, index) => {
+      const characterSprite = new PIXI.Sprite.from(imagePath);
+      characterSprite.anchor.set(0.5);
+
+      // キャラクター画像の大きさを調整
+      characterSprite.width = 100; // 幅を150ピクセルに設定
+      characterSprite.height = 100; // 高さを150ピクセルに設定
+
+      // 配置位置を設定
+      characterSprite.position.set(
+        Config.Screen.Width / 2 + (index - 1) * 100,// 適切な間隔を開けて配置
+        Config.Screen.Height / 2
+      );
+
+      this.addChild(characterSprite);
+      this.characters.push(characterSprite);
+    });
+
+    // 選択キャラクターのインデックス
+    this.selectedIndex = 0;
+    this.playerSelections = [];
+
+    // キーボードイベントリスナーの追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  onKeyDown(event) {
+    if (event.key === 'ArrowLeft') {
+      this.selectPreviousCharacter();
+      PIXI.sound.play(Resource.SELECT);
+    } else if (event.key === 'ArrowRight') {
+      this.selectNextCharacter();
+      PIXI.sound.play(Resource.SELECT);
+    } else if (event.key === 'Enter') {
+      this.confirmSelection();
+      PIXI.sound.play(Resource.ENTER);
+    }
+  }
+
+  selectPreviousCharacter() {
+    this.selectedIndex = (this.selectedIndex - 1 + this.characters.length) % this.characters.length;
+    this.updateCharacterSelection();
+  }
+
+  selectNextCharacter() {
+    this.selectedIndex = (this.selectedIndex + 1) % this.characters.length;
+    this.updateCharacterSelection();
+  }
+
+  updateCharacterSelection() {
+    this.characters.forEach((character, index) => {
+      if (index === this.selectedIndex) {
+        character.alpha = 1.0; // 選択されているキャラクターの透明度を1.0に設定
+      } else {
+        character.alpha = 0.5; // 選択されていないキャラクターの透明度を0.5に設定
+      }
+    });
+  }
+
+  confirmSelection() {
+    // 選択されたキャラクターを記録
+    this.playerSelections.push(this.characters[this.selectedIndex]);
+
+    if (this.playerSelections.length === 2) {
+      window.removeEventListener("keydown", this.onKeyDown);
+      PIXI.sound.stop(Resource.OP_BGM);
+      const health_1p=document.getElementById("player1-health-bar");
+      health_1p.style.display="block";
+      const health_2p=document.getElementById("player2-health-bar");
+      health_2p.style.display="block";
+      core.replaceScene(new MainScene());
+    }else{
+      this.characters[0].alpha=1.0;
+    }
+  }
+}
+/////////////////////メインシーン//////////////////////////////////////////////////
+      class MainScene extends Container {
+        constructor() {
+          super();
+       // 背景画像を追加
+    this.background = new PIXI.Sprite.from("./temple1.jpg");
+    this.background.width = Config.Screen.Width;
+    this.background.height = Config.Screen.Height;
+    this.addChild(this.background);
+   // 左側の壁
+    this.leftWall = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.leftWall.width = 10;
+    this.leftWall.height = Config.Screen.Height;
+    this.leftWall.position.set(0, 0);
+    this.addChild(this.leftWall);
+
+    // 右側の壁
+    this.rightWall = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.rightWall.width = 10;
+    this.rightWall.height = Config.Screen.Height;
+    this.rightWall.position.set(Config.Screen.Width - this.rightWall.width, 0);
+    this.addChild(this.rightWall);
+
+
+          this.player = new Player(26, 30);
+          this.addChild(this.player);
+
+          this.player2 = new Player2(26, 29);
+          this.addChild(this.player2);
+
+          this.shootImages = [];
+          this.shootSpeed = 5; // 弾の速度
+
+          PIXI.sound.play(Resource.BGM,{loop:true});
+        }
+        update(delta) {
+          if (gameOver) return; // ゲームオーバーなら更新しない
+          super.update(delta);
+
+    // プレイヤー1の移動制御
+    this.player.x = Math.max(this.leftWall.width, Math.min(this.player.x, Config.Screen.Width - this.rightWall.width-this.player.width/2));
+
+    // プレイヤー2の移動制御
+    this.player2.x = Math.max(this.leftWall.width, Math.min(this.player2.x, Config.Screen.Width -this.player2.width/3 - this.rightWall.width));
+          // Aボタンが押されたときの処理
+          if (
+            inputManager.checkButton(1, "A") === inputManager.keyStatus.DOWN
+          ) {
+            const shootImage = new PIXI.Sprite(
+              PIXI.Texture.from(Resource.Bullet)
+            );
+            shootImage.width = 100;
+            shootImage.height = 100;
+            shootImage.position.set(
+              this.player.x - this.player.width,
+              this.player.y - 70
+            );
+            shootImage.directionX = Math.sign(this.player2.x - this.player.x); // プレイヤー2の方向に飛ばす
+            shootImage.shooter = "player1";
+            this.addChild(shootImage);
+            this.shootImages.push(shootImage);
+            PIXI.sound.play(Resource.SE);
+          }
+
+          // A2ボタンが押されたときの処理
+          if (
+            inputManager.checkButton(2, "A2") === inputManager.keyStatus.DOWN
+          ) {
+            const shootImage = new PIXI.Sprite(
+              PIXI.Texture.from(Resource.Bullet)
+            );
+            shootImage.width = 100;
+            shootImage.height = 100;
+            shootImage.position.set(
+              this.player2.x - this.player2.width - 36,
+              this.player2.y - 70
+            );
+            shootImage.directionX = -Math.sign(this.player2.x - this.player.x); // プレイヤー1の方向に飛ばす
+            shootImage.shooter = "player2";
+            this.addChild(shootImage);
+            this.shootImages.push(shootImage);
+            PIXI.sound.play(Resource.SE);
+          }
+
+          // 画像が表示されている場合の移動処理
+          for (let i = this.shootImages.length - 1; i >= 0; i--) {
+            const shootImage = this.shootImages[i];
+            shootImage.x += shootImage.directionX * this.shootSpeed;
+
+// shootImageの方向に応じて適切な画像に変更
+      if (shootImage.directionX < 0) {
+        shootImage.texture = PIXI.Texture.from(Resource.Bullet2); // 右から左への弾を変更
+      } else {
+        shootImage.texture = PIXI.Texture.from(Resource.Bullet);
+      }
+
+
+            // 当たり判定のチェック
+            if (
+              shootImage.shooter === "player1" &&
+              this.checkCollision(shootImage, this.player2)
+            ) {
+              reduceHealth("player2", 5);
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+              continue;
+            } else if (
+              shootImage.shooter === "player2" &&
+              this.checkCollision(shootImage, this.player)
+            ) {
+              reduceHealth("player1", 5);
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+              continue;
+            }
+            // 画面の端まで到達したら非表示にする
+            if (shootImage.x < 0 || shootImage.x > Config.Screen.Width) {
+              this.removeChild(shootImage);
+              this.shootImages.splice(i, 1);
+            }
+          }
+        }
+        // 当たり判定の関数
+        checkCollision(bullet, player) {
+          //位置、大きさを取得する関数getBounds();
+          const bulletBounds = bullet.getBounds();
+          const playerBounds = player.getBounds();
+          return (
+            //弾の左端がプレイヤーの右端より左にあるか
+            bulletBounds.x+bulletBounds.width/2 < playerBounds.x + playerBounds.width &&
+            //弾の右端がプレイヤーの左端より右にあるか
+            bulletBounds.x + bulletBounds.width > playerBounds.x+playerBounds.width*2&&
+            //弾の上端がプレイヤーの下端より上にあるか
+            bulletBounds.y < playerBounds.y + playerBounds.height &&
+            //弾の下端がプレイヤーの上端より下にあるか
+            bulletBounds.y + bulletBounds.height > playerBounds.y
+          );
+        }
+      }
+
+      (function () {
+
+        // 入力受付時間（1.5秒）
+          let wait = 1500,
+
+        // standby = false の時は入力を受け付けない
+        standby = true,
+
+        // コマンドのキーコード
+        command2 = [38, 39, 40, 80],
+
+        length = command2.length,
+        index = 0,
+        timer = null;
+
+    document.addEventListener('keydown', function (ev) {
+
+        clearTimeout(timer);
+
+        if (standby && ev.keyCode === command2[index]) {
+            index++;
+
+            if (index >= length) {
+                standby = false; // コマンド入力完了後、standbyをfalseに設定
+                index = 0;
+                //入力成功後の処理
+                const Button=document.getElementById("hide");
+                Button.style.display="block";
+
+                // 一定時間後にstandbyをtrueに戻す（例：5秒後）
+                setTimeout(function () {
+                    standby = true;
+                }, 5000);
+            } else {
+                timer = setTimeout(function () {
+                    index = 0;
+                }, wait);
+
+                // コマンド入力を間違えたらリセット
+            }
+        } else {
+            index = 0;
+        }
+    });
+})();
+////////////////////////////全キャラクター共通基本クラス////////////////////////////////////
+      class Actor extends EnchantSprite {
+        constructor(w, h) {
+          super(w, h);
+          this.anchor.set(0.5, 1); //Y座標の中心は足元に
+          this.vx = 0;
+          this.vy = 0;
+          this.fpX = 0; //小数点以下保存用
+          this.fpY = 0;
+
+          //アニメーション用
+          this.animation = {
+            isPlayAuto: false,
+            frameNumbers: [],
+            intervals: [],
+            type: null,
+            index: 0,
+            count: 0,
+            data: {},
+          };
+        }
+        //アニメーション切り替えプログラム
+        changeAnimationPattern(type) {
+          const anim = this.animation;
+          anim.frameNumbers = anim.data[type].frameNumbers;
+          anim.intervals = anim.data[type].intervals;
+          anim.type = type;
+          anim.index = 0;
+          anim.count = 0;
+          this.frameNumber = anim.frameNumbers[0];
+        }
+        //キャラの座標から小数点を抜く
+        posRemoveFractionalPart() {
+          const x = this.x | 0; //小数点以下を切り捨て
+          this.fpX = this.x - x;
+          this.x = x;
+          const y = this.y | 0;
+          this.fpY = this.y - y;
+          this.y = y;
+        }
+        //キャラの座標に小数点以下を戻す
+        posRestoreFractionalPart() {
+          this.x += this.fpX;
+          this.y += this.fpY;
+        }
+        update(delta) {
+          if (gameOver) return;
+          super.update(delta);
+          //自動アニメーション処理
+          const anim = this.animation;
+          if (anim.isPlayAuto && ++anim.count > anim.intervals[anim.index]) {
+            if (++anim.index >= anim.intervals.length) {
+              anim.index = 0;
+            }
+            this.frameNumber = anim.frameNumbers[anim.index];
+            anim.count = 0;
+          }
+        }
+      }
+
+///////////////////////////////プレイヤー1クラス////////////////////////////////////
+      class Player extends Actor {
+        constructor(w, h) {
+          super(w, h);
+          this.image = core.resources[Resource.Player].texture;
+          this.position.set(
+            Config.Screen.Width * 0.25,
+            Config.Screen.Height * 0.75
+          );
+          this.maxSpeed = 4;
+          this.acceleration = 0.24;
+          this.friction = 0.08;
+          this.isOnGround = true;
+          this.gravity = 0.3;
+
+          this.projectiles = [];
+
+          this.animation.data = {
+            stand: {
+              frameNumbers: [16],
+              intervals: [100],
+            },
+            walk: {
+              frameNumbers: [16,18,16,18],
+              intervals: [8, 8, 8, 8],
+            },
+            jump: {
+              frameNumbers: [16],
+              intervals: [100],
+            },
+            fall: {
+              frameNumbers: [16],
+              intervals: [100],
+            },
+          };
+          this.animation.type = "stand";
+          this.animation.isPlayAuto = true;
+        }
+        update(delta) {
+          if (gameOver) return;
+          super.update(delta);
+          this.posRestoreFractionalPart(); //一番最初に小数点を戻す
+
+          const btn = inputManager.checkButton(1, "Up");
+          if (btn == inputManager.keyStatus.DOWN) {
+            if (this.isOnGround) {
+              this.vy = -8;
+              this.changeAnimationPattern("jump");
+            }
+          }
+          if (btn == inputManager.keyStatus.RELEASE) {
+            if (this.vy < 0) {
+              this.vy /= 2;
+            }
+          }
+          this.isOnGround = false;
+          this.vy += this.gravity;
+          this.y += this.vy;
+          if (this.y > Config.Screen.Height * 0.75) {
+            this.y = Config.Screen.Height * 0.75;
+            this.vy = 0;
+            this.isOnGround = true;
+            if (this.animation.type != "walk") {
+              this.changeAnimationPattern("walk");
+            }
+          } else if (this.vy > 0 && this.animation.type != "fall") {
+            this.changeAnimationPattern("fall");
+          }
+
+          switch (inputManager.checkDirection(1)) {
+            case inputManager.keyDirections.RIGHT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x = 1;
+              this.vx += this.acceleration;
+              this.vx = this.vx > this.maxSpeed ? this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.LEFT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x =-1;
+              this.vx -= this.acceleration;
+              this.vx = this.vx < -this.maxSpeed ? -this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.DOWN:
+              break;
+            default:
+              break;
+          }
+
+          //摩擦的なもの(減速させる)
+          if (this.vx > this.friction) {
+            this.vx -= this.friction;
+          } else if (this.vx < -this.friction) {
+            this.vx += this.friction;
+          } else {
+            this.vx = 0;
+            if (this.isOnGround) {
+              this.changeAnimationPattern("stand");
+            }
+          }
+          this.x += this.vx;
+          this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
+        }
+      }
+
+////////////////////////////プレイヤー2クラス////////////////////////////////////
+      class Player2 extends Actor {
+        constructor(w, h) {
+          super(w, h);
+          this.image = core.resources[Resource.Player].texture;
+          this.position.set(
+            Config.Screen.Width * 0.75,
+            Config.Screen.Height * 0.75
+          );
+          this.maxSpeed = 4;
+          this.acceleration = 0.24;
+          this.friction = 0.08;
+          this.isOnGround = true;
+          this.gravity = 0.3;
+
+          this.animation.data = {
+            stand: {
+              frameNumbers: [56],
+              intervals: [100],
+            },
+            walk: {
+              frameNumbers: [55, 56, 57, 56],
+              intervals: [8, 8, 8, 8],
+            },
+            jump: {
+              frameNumbers: [56],
+              intervals: [100],
+            },
+            fall: {
+              frameNumbers: [56],
+              intervals: [100],
+            },
+          };
+          this.animation.type = "stand";
+          this.animation.isPlayAuto = true;
+        }
+        update(delta) {
+          if (gameOver) return;
+          super.update(delta);
+          this.posRestoreFractionalPart(); //一番最初に小数点を戻す
+
+          const btn = inputManager.checkButton(2, "Up2");
+          if (btn == inputManager.keyStatus.DOWN) {
+            if (this.isOnGround) {
+              this.vy = -8;
+              this.changeAnimationPattern("jump");
+            }
+          }
+          if (btn == inputManager.keyStatus.RELEASE) {
+            if (this.vy < 0) {
+              this.vy /= 2;
+            }
+          }
+          this.isOnGround = false;
+          this.vy += this.gravity;
+          this.y += this.vy;
+          if (this.y > Config.Screen.Height * 0.75) {
+            this.y = Config.Screen.Height * 0.75;
+            this.vy = 0;
+            this.isOnGround = true;
+            if (this.animation.type != "walk") {
+              this.changeAnimationPattern("walk");
+            }
+          } else if (this.vy > 0 && this.animation.type != "fall") {
+            this.changeAnimationPattern("fall");
+          }
+
+          switch (inputManager.checkDirection(2)) {
+            case inputManager.keyDirections.RIGHT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x =-1;
+              this.vx += this.acceleration;
+              this.vx = this.vx > this.maxSpeed ? this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.LEFT:
+              if (this.isOnGround && this.vx == 0) {
+                this.changeAnimationPattern("walk");
+              }
+              this.scale.x = 1;
+              this.vx -= this.acceleration;
+              this.vx = this.vx < -this.maxSpeed ? -this.maxSpeed : this.vx;
+              break;
+            case inputManager.keyDirections.DOWN:
+              break;
+            default:
+              break;
+          }
+
+          //摩擦のようなもの(減速させる)
+          if (this.vx > this.friction) {
+            this.vx -= this.friction;
+          } else if (this.vx < -this.friction) {
+            this.vx += this.friction;
+          } else {
+            this.vx = 0;
+            if (this.isOnGround) {
+              this.changeAnimationPattern("stand");
+            }
+          }
+          this.x += this.vx;
+          this.posRemoveFractionalPart(); //一番最後に小数点を取り除く
+        }
+      }
+
+    </script>
+  </body>
+</html>

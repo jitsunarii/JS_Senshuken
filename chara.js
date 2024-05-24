@@ -4,9 +4,9 @@ class Game {
     this.isActive = true;//画面の表示切替チェック用(サウンド管理で必要)
     this.loadProgress = {loaded: 0};//ロード状況確認用
     //ゲーム画面作成
-    const app = new PIXI.Application({ 
-      width: width, 
-      height: height,                       
+    const app = new PIXI.Application({
+      width: width,
+      height: height,
       backgroundColor: color,
       resolution: 1,
       autoDensity: true
@@ -34,8 +34,6 @@ class Game {
         this.currentScene.update(delta);
       }
     });
-    
-    //使いやす場所に
     this.app = app;
     this.loader = PIXI.Loader.shared;
     this.resources = PIXI.Loader.shared.resources;
@@ -51,7 +49,7 @@ class Game {
     });
     // リサイズイベントの登録
     window.addEventListener('resize', () => {this.resizeCanvas();});
-    this.resizeCanvas();  
+    this.resizeCanvas();
       
     //ブラウザの種類を取得
     const browser = (function(ua) {
@@ -81,7 +79,7 @@ class Game {
     //ロード画面表示
     this.replaceScene(new LoadingScene(width, height, this.loadProgress));
   }
-  //Androidはフルスクリーンに
+
   enableFullScreen(browser) {
     if (browser === 'android') {
       const type = typeof document.ontouchend;
@@ -304,10 +302,6 @@ class Sprite extends PIXI.Sprite {
   }
 }
 
-/***********************************************
- * enchant.js風のスプライト
- * 拡大縮小回転などをするとノイズが入る問題がある
- ***********************************************/
  class EnchantSprite extends Sprite {
   constructor(width, height){
     super();
@@ -353,10 +347,6 @@ class Sprite extends PIXI.Sprite {
   }
 }
 
-/***********************************************
- * Graphicsにupdate機能追加
- * いくつかの図形をすぐかけるようにした
- ***********************************************/
 class Graphics extends PIXI.Graphics {
   constructor(){
     super();

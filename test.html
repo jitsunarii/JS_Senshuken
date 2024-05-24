@@ -11,16 +11,36 @@
         padding: 0;
       }
       body {
-        background-color: #222;
+        background-color: blue;
       }
 
       /*ゲーム画面*/
       #game-screen {
         margin: 0 auto;
       }
+      .health-bar {
+        width: 200px;
+        height: 20px;
+        background-color: grey;
+        border: 1px solid #000;
+        margin: 10px;
+      }
+
+      .health {
+        height: 100%;
+        background-color: green;
+      }
     </style>
   </head>
   <body>
+    <!-- 体力バーの追加 -->
+    <div id="player1-health-bar" class="health-bar">
+      <div id="player1-health" class="health" style="width: 100%"></div>
+    </div>
+    <div id="player2-health-bar" class="health-bar">
+      <div id="player2-health" class="health" style="width: 100%"></div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
     <script src="./chara.js"></script>
@@ -32,7 +52,7 @@
         Screen: {
           Width: 512, //幅
           Height: 512, //高さ
-          BackGroundColor: 0x444444, //背景色
+          BackGroundColor: 0xeaf4fc, //背景色
         },
         Keys: {
           //キーボード入力
@@ -228,7 +248,7 @@
           }
 
           switch (inputManager.checkDirection()) {
-            case inputManager.keyDirections.RIGHT:
+            case inputManager.keyDirections.RIGHT2:
               if (this.isOnGround && this.vx == 0) {
                 this.changeAnimationPattern("walk");
               }
