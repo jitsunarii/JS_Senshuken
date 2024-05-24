@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="jp">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,7 +11,7 @@
         padding: 0;
       }
       body {
-        background-color: blue;
+        background-color: white;
       }
 
       /*ゲーム画面*/
@@ -38,6 +38,9 @@
         height: 100%;
         background-color: green;
       }
+      #hide{
+        text-align: center;
+      }
 
       /* 勝利メッセージ */
       #win-message {
@@ -46,20 +49,23 @@
         left: 50%;
         transform: translate(-50%, -50%);
         font-size: 32px;
-        color: white;
+        color: red;
         display: none;
       }
     </style>
   </head>
   <body>
-    <div id="player1-health-bar" class="health-bar">
-      <div id="player1-health" class="health" style="width: 100%"></div>
+    <div id="player1-health-bar" class="health-bar" style="display: none;">
+      <div id="player1-health" class="health" style="width: 100%;"></div>
     </div>
-    <div id="player2-health-bar" class="health-bar">
+    <div id="player2-health-bar" class="health-bar" style="display: none;">
       <div id="player2-health" class="health" style="width: 100%"></div>
     </div>
       </div>
       <div id="win-message">Player 1 WIN</div>
+      <div id="hide" style="display: none;">
+        <button>上京する</button>
+      </div>
     </div>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.7/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@4.0.4/dist/pixi-sound.js"></script>
@@ -95,10 +101,13 @@
         Title:"./kyushu-hakuchizu.png",
         Player: "./character.png",
         Bullet: "./hadoken.gif",
+        Bullet2:"./mirror.hado.gif",
         OP_BGM:"./OP_BGM.mp3",
         Title_BGM:"./Title_BGM.mp3",
-        BGM:"./Fight_BGM.mp3", // BGMの追加
-        SE:"./hadoken.wav"
+        BGM:"./main_BGM.mp3", // BGMの追加
+        SE:"./hadoken.wav",
+        SELECT:"./SELECT2.mp3",
+        ENTER:"./ENTER2.mp3",
       };
 
       //上のリストを読み込みやすい形にする
@@ -108,7 +117,6 @@
       }
         let core;
         let inputManager;
-      //  core; //ゲームの基幹プログラム用の変数
 
       //ブラウザの読み込みが完了したら実行
       window.onload = () => {
@@ -118,13 +126,11 @@
           Config.Screen.Height,
           Config.Screen.BackGroundColor
         );
- inputManager = new InputManager();
+inputManager = new InputManager();
         //データのロード
         core.preload(assets);
-
-        //読み込み完了でタイトルシーンに切り替え
-///////////////////////////////////変更１/////////////////////////////////////
         core.onload =function(){
+          //Opening画面に移動
           core.replaceScene(new OpeningScene());
         };
       };
@@ -133,7 +139,7 @@
       let player2;
       //体力バーの初期設定
       let player1Health = 100;
-      let player2Health = 100;
+       let player2Health = 100;
 
       // ゲームオーバーフラグ
       let gameOver = false;
@@ -176,10 +182,11 @@
         winMessage.style.display = "block";
       }
 
-      //初期状態の体力バーを設定
-      updateHealthBar("player1", player1Health);
-      updateHealthBar("player2", player2Health);
-      let push_Enter=false;
+      // //初期状態の体力バーを設
+      
+       updateHealthBar("player1", player1Health);
+       updateHealthBar("player2", player2Health);
+       let push_Enter=false;
 ////////////////////オープニングシーン///////////////////////////////////////////
 class OpeningScene extends Container {
   constructor() {
@@ -187,7 +194,7 @@ class OpeningScene extends Container {
     this.messages = [
       "20XX年",
       "九州",
-      "今日も県の誇りをかけ",
+      "今宵も県の誇りをかけ",
       "壮絶な死闘が繰り広げられていた---"
     ];
     this.currentIndex = 0;
@@ -268,8 +275,8 @@ class OpeningScene extends Container {
     window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
   }
 }
-
-      class TitleScene extends Container {
+//////////////////////////////タイトルシーン///////////////////////////////////////////////
+class TitleScene extends Container {
   constructor() {
     super();
     // 背景画像の設定
@@ -297,7 +304,7 @@ class OpeningScene extends Container {
     this.addChild(this.textKYUSYU);
 
     this.textFIGHTER = new PIXI.Text("FIGHTER", style);
-    this.textFIGHTER.anchor.set(0.5);
+    this.textFIGHTER.anchor.set(0.5);//0.5になる
     this.textFIGHTER.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 );
     this.textFIGHTER.scale.set(3); // 最初は3倍の大きさ
     this.textFIGHTER.alpha = 0;
@@ -343,10 +350,9 @@ class OpeningScene extends Container {
 
    onKeyDown(event) {
     if (event.key === "Enter") {
-    // OP_BGMを停止する
-    PIXI.sound.stop(Resource.OP_BGM);
+    
       window.removeEventListener("keydown", this.onKeyDown);
-      core.replaceScene(new MainScene());
+      core.replaceScene(new CharacterSelectScene());
     }
   }
 
@@ -355,10 +361,135 @@ class OpeningScene extends Container {
     window.removeEventListener("keydown", this.onKeyDown); // クリーンアップ
   }
 }
-      ///////////////メインシーン//////////////////////////////////////////////////
+/////////////////キャラクターセレクト////////////////////////////////////////
+class CharacterSelectScene extends Container {
+  constructor() {
+    super();
+
+    // キャラクター画像のロード
+    const characterImages = [
+      './chara_Fukuoka.png',
+      './chara_Nagasaki.png',
+      './chara_Oita.png',
+
+    ];
+const style = new PIXI.TextStyle({
+      fontFamily: "sans-serif",
+      fontSize: 25,
+      fill: 0xffffff,
+      fontWeight: "bold",
+      stroke: "red",
+      strokeThickness: 4,
+    });
+
+
+this.textSelect= new PIXI.Text("Select your character",style);
+    this.textSelect.anchor.set(0.5);
+    this.textSelect.position.set(Config.Screen.Width / 2, Config.Screen.Height / 3 - 50);
+    this.characters = [];
+    this.addChild(this.textSelect);
+
+    // 県の画像設定
+    characterImages.forEach((imagePath, index) => {
+      const characterSprite = new PIXI.Sprite.from(imagePath);
+      characterSprite.anchor.set(0.5);
+
+      // キャラクター画像の大きさを調整
+      characterSprite.width = 100; // 幅を150ピクセルに設定
+      characterSprite.height = 100; // 高さを150ピクセルに設定
+
+      // 配置位置を設定
+      characterSprite.position.set(
+        Config.Screen.Width / 2 + (index - 1) * 100,// 適切な間隔を開けて配置
+        Config.Screen.Height / 2
+      );
+
+      this.addChild(characterSprite);
+      this.characters.push(characterSprite);
+    });
+
+    // 選択キャラクターのインデックス
+    this.selectedIndex = 0;
+    this.playerSelections = [];
+
+    // キーボードイベントリスナーの追加
+    this.onKeyDown = this.onKeyDown.bind(this);
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  onKeyDown(event) {
+    if (event.key === 'ArrowLeft') {
+      this.selectPreviousCharacter();
+      PIXI.sound.play(Resource.SELECT);
+    } else if (event.key === 'ArrowRight') {
+      this.selectNextCharacter();
+      PIXI.sound.play(Resource.SELECT);
+    } else if (event.key === 'Enter') {
+      this.confirmSelection();
+      PIXI.sound.play(Resource.ENTER);
+    }
+  }
+
+  selectPreviousCharacter() {
+    this.selectedIndex = (this.selectedIndex - 1 + this.characters.length) % this.characters.length;
+    this.updateCharacterSelection();
+  }
+
+  selectNextCharacter() {
+    this.selectedIndex = (this.selectedIndex + 1) % this.characters.length;
+    this.updateCharacterSelection();
+  }
+
+  updateCharacterSelection() {
+    this.characters.forEach((character, index) => {
+      if (index === this.selectedIndex) {
+        character.alpha = 1.0; // 選択されているキャラクターの透明度を1.0に設定
+      } else {
+        character.alpha = 0.5; // 選択されていないキャラクターの透明度を0.5に設定
+      }
+    });
+  }
+
+  confirmSelection() {
+    // 選択されたキャラクターを記録
+    this.playerSelections.push(this.characters[this.selectedIndex]);
+
+    if (this.playerSelections.length === 2) {
+      window.removeEventListener("keydown", this.onKeyDown);
+      PIXI.sound.stop(Resource.OP_BGM);
+      const health_1p=document.getElementById("player1-health-bar");
+      health_1p.style.display="block";
+      const health_2p=document.getElementById("player2-health-bar");
+      health_2p.style.display="block";
+      core.replaceScene(new MainScene());
+    }else{
+      this.characters[0].alpha=1.0;
+    }
+  }
+}
+/////////////////////メインシーン//////////////////////////////////////////////////
       class MainScene extends Container {
         constructor() {
           super();
+       // 背景画像を追加
+    this.background = new PIXI.Sprite.from("./temple1.jpg");
+    this.background.width = Config.Screen.Width;
+    this.background.height = Config.Screen.Height;
+    this.addChild(this.background);
+   // 左側の壁
+    this.leftWall = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.leftWall.width = 10;
+    this.leftWall.height = Config.Screen.Height;
+    this.leftWall.position.set(0, 0);
+    this.addChild(this.leftWall);
+
+    // 右側の壁
+    this.rightWall = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.rightWall.width = 10;
+    this.rightWall.height = Config.Screen.Height;
+    this.rightWall.position.set(Config.Screen.Width - this.rightWall.width, 0);
+    this.addChild(this.rightWall);
+
 
           this.player = new Player(26, 30);
           this.addChild(this.player);
@@ -367,7 +498,6 @@ class OpeningScene extends Container {
           this.addChild(this.player2);
 
           this.shootImages = [];
-
           this.shootSpeed = 5; // 弾の速度
 
           PIXI.sound.play(Resource.BGM,{loop:true});
@@ -376,6 +506,11 @@ class OpeningScene extends Container {
           if (gameOver) return; // ゲームオーバーなら更新しない
           super.update(delta);
 
+    // プレイヤー1の移動制御
+    this.player.x = Math.max(this.leftWall.width, Math.min(this.player.x, Config.Screen.Width - this.rightWall.width-this.player.width/2));
+
+    // プレイヤー2の移動制御
+    this.player2.x = Math.max(this.leftWall.width, Math.min(this.player2.x, Config.Screen.Width -this.player2.width/3 - this.rightWall.width));
           // Aボタンが押されたときの処理
           if (
             inputManager.checkButton(1, "A") === inputManager.keyStatus.DOWN
@@ -394,8 +529,6 @@ class OpeningScene extends Container {
             this.addChild(shootImage);
             this.shootImages.push(shootImage);
             PIXI.sound.play(Resource.SE);
-            // プレイヤー2にダメージを与える
-            // reduceHealth("player2", 10);
           }
 
           // A2ボタンが押されたときの処理
@@ -423,12 +556,20 @@ class OpeningScene extends Container {
             const shootImage = this.shootImages[i];
             shootImage.x += shootImage.directionX * this.shootSpeed;
 
+// shootImageの方向に応じて適切な画像に変更
+      if (shootImage.directionX < 0) {
+        shootImage.texture = PIXI.Texture.from(Resource.Bullet2); // 右から左への弾を変更
+      } else {
+        shootImage.texture = PIXI.Texture.from(Resource.Bullet);
+      }
+
+
             // 当たり判定のチェック
             if (
               shootImage.shooter === "player1" &&
               this.checkCollision(shootImage, this.player2)
             ) {
-              reduceHealth("player2", 10);
+              reduceHealth("player2", 5);
               this.removeChild(shootImage);
               this.shootImages.splice(i, 1);
               continue;
@@ -436,7 +577,7 @@ class OpeningScene extends Container {
               shootImage.shooter === "player2" &&
               this.checkCollision(shootImage, this.player)
             ) {
-              reduceHealth("player1", 10);
+              reduceHealth("player1", 5);
               this.removeChild(shootImage);
               this.shootImages.splice(i, 1);
               continue;
@@ -450,17 +591,68 @@ class OpeningScene extends Container {
         }
         // 当たり判定の関数
         checkCollision(bullet, player) {
+          //位置、大きさを取得する関数getBounds();
           const bulletBounds = bullet.getBounds();
           const playerBounds = player.getBounds();
           return (
-            bulletBounds.x < playerBounds.x + playerBounds.width &&
-            bulletBounds.x + bulletBounds.width > playerBounds.x &&
+            //弾の左端がプレイヤーの右端より左にあるか
+            bulletBounds.x+bulletBounds.width/2 < playerBounds.x + playerBounds.width &&
+            //弾の右端がプレイヤーの左端より右にあるか
+            bulletBounds.x + bulletBounds.width > playerBounds.x+playerBounds.width*2&&
+            //弾の上端がプレイヤーの下端より上にあるか
             bulletBounds.y < playerBounds.y + playerBounds.height &&
+            //弾の下端がプレイヤーの上端より下にあるか
             bulletBounds.y + bulletBounds.height > playerBounds.y
           );
         }
       }
-      ///////////////全キャラクター共通基本クラス////////////////////////////////////
+
+      (function () {
+
+        // 入力受付時間（1.5秒）
+          let wait = 1500,
+
+        // standby = false の時は入力を受け付けない
+        standby = true,
+
+        // コマンドのキーコード
+        command2 = [38, 39, 40, 80],
+
+        length = command2.length,
+        index = 0,
+        timer = null;
+
+    document.addEventListener('keydown', function (ev) {
+
+        clearTimeout(timer);
+
+        if (standby && ev.keyCode === command2[index]) {
+            index++;
+
+            if (index >= length) {
+                standby = false; // コマンド入力完了後、standbyをfalseに設定
+                index = 0;
+                //入力成功後の処理
+                const Button=document.getElementById("hide");
+                Button.style.display="block";
+
+                // 一定時間後にstandbyをtrueに戻す（例：5秒後）
+                setTimeout(function () {
+                    standby = true;
+                }, 5000);
+            } else {
+                timer = setTimeout(function () {
+                    index = 0;
+                }, wait);
+
+                // コマンド入力を間違えたらリセット
+            }
+        } else {
+            index = 0;
+        }
+    });
+})();
+////////////////////////////全キャラクター共通基本クラス////////////////////////////////////
       class Actor extends EnchantSprite {
         constructor(w, h) {
           super(w, h);
@@ -520,7 +712,7 @@ class OpeningScene extends Container {
         }
       }
 
-      //////////////////////プレイヤークラス////////////////////////////////////
+///////////////////////////////プレイヤー1クラス////////////////////////////////////
       class Player extends Actor {
         constructor(w, h) {
           super(w, h);
@@ -539,19 +731,19 @@ class OpeningScene extends Container {
 
           this.animation.data = {
             stand: {
-              frameNumbers: [17],
+              frameNumbers: [16],
               intervals: [100],
             },
             walk: {
-              frameNumbers: [16, 17, 18, 17],
+              frameNumbers: [16,18,16,18],
               intervals: [8, 8, 8, 8],
             },
             jump: {
-              frameNumbers: [17],
+              frameNumbers: [16],
               intervals: [100],
             },
             fall: {
-              frameNumbers: [17],
+              frameNumbers: [16],
               intervals: [100],
             },
           };
@@ -602,7 +794,7 @@ class OpeningScene extends Container {
               if (this.isOnGround && this.vx == 0) {
                 this.changeAnimationPattern("walk");
               }
-              this.scale.x = 1;
+              this.scale.x =-1;
               this.vx -= this.acceleration;
               this.vx = this.vx < -this.maxSpeed ? -this.maxSpeed : this.vx;
               break;
@@ -628,7 +820,7 @@ class OpeningScene extends Container {
         }
       }
 
-      ///////////////プレイヤー2クラス////////////////////////////////////
+////////////////////////////プレイヤー2クラス////////////////////////////////////
       class Player2 extends Actor {
         constructor(w, h) {
           super(w, h);
@@ -645,19 +837,19 @@ class OpeningScene extends Container {
 
           this.animation.data = {
             stand: {
-              frameNumbers: [49],
+              frameNumbers: [56],
               intervals: [100],
             },
             walk: {
-              frameNumbers: [48, 49, 50, 49],
+              frameNumbers: [55, 56, 57, 56],
               intervals: [8, 8, 8, 8],
             },
             jump: {
-              frameNumbers: [49],
+              frameNumbers: [56],
               intervals: [100],
             },
             fall: {
-              frameNumbers: [49],
+              frameNumbers: [56],
               intervals: [100],
             },
           };
@@ -700,7 +892,7 @@ class OpeningScene extends Container {
               if (this.isOnGround && this.vx == 0) {
                 this.changeAnimationPattern("walk");
               }
-              this.scale.x = 1;
+              this.scale.x =-1;
               this.vx += this.acceleration;
               this.vx = this.vx > this.maxSpeed ? this.maxSpeed : this.vx;
               break;
@@ -718,7 +910,7 @@ class OpeningScene extends Container {
               break;
           }
 
-          //摩擦的なもの(減速させる)
+          //摩擦のようなもの(減速させる)
           if (this.vx > this.friction) {
             this.vx -= this.friction;
           } else if (this.vx < -this.friction) {
